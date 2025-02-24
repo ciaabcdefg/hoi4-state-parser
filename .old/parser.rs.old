@@ -1,0 +1,150 @@
+use core::panic;
+use std::fmt::Error;
+
+use crate::{
+    lexer,
+    token::{Token, TokenType},
+};
+
+pub struct Parser<'a> {
+    lexer: &'a mut lexer::Lexer,
+}
+
+#[derive(Debug)]
+pub enum AssignmentValue {
+    Value(Token),
+    Table(Vec<TableEntry>),
+}
+
+#[derive(Debug)]
+pub struct AssignmentExpression {
+    pub identifier: Token,
+    pub value: AssignmentValue,
+}
+
+#[derive(Debug)]
+pub enum TableEntry {
+    KeyValue(AssignmentExpression),
+    ArrayElement(Token),
+}
+
+impl<'a> Parser<'a> {
+    pub fn new(lexer: &'a mut lexer::Lexer) -> Self {
+        Self { lexer }
+    }
+
+    pub fn consume(&mut self, expected_token_type: TokenType) -> Result<(), String> {
+        let cur_token = self.lexer.advance();
+        if cur_token.token_type != expected_token_type {
+            return Err(format!(
+                "ParserError: expecting token of type {:?}, got {:?}",
+                expected_token_type, cur_token.token_type
+            ));
+        }
+        Ok(())
+    }
+
+    pub fn parse_stmt(&mut self) {
+        let mut cur_token = self.lexer.advance();
+        match cur_token.token_type {
+            TokenType::Identifier => {
+                /*
+                Identifier
+                | parse_assignment_stmt
+                | parse_identifier_expr
+                 */
+
+                cur_token = self.lexer.advance();
+                if cur_token.token_type == TokenType::Equal {
+                    // parse_assignment_stmt
+                } else {
+                    // parse_identifier_expr
+                }
+            }
+            _ => panic!("UnimplementedError"),
+        }
+    }
+
+    pub fn parse_assignment(&mut self) -> Result<AssignmentExpression, String> {
+        let cur_token = self.lexer.advance();
+        if cur_token.token_type != TokenType::Identifier
+            && cur_token.token_type != TokenType::Integer
+        {
+            return Err(format!(
+                "ParserError: expecting a string identifier or a number identifier, got {:?}",
+                cur_token.token_type
+            ));
+        }
+
+        if let Err(error) = self.consume(TokenType::Equal) {
+            return Err(error);
+        }
+
+        let next_token = self.lexer.peek();
+
+        if next_token.token_type == TokenType::EOF {
+            return Err("ParserError: unexpected end of input".to_string());
+        } else if next_token.token_type == TokenType::Undefined {
+            return Err(format!(
+                "ParserError: undefined token '{}'",
+                next_token.value
+            ));
+        } else if next_token.token_type == TokenType::LBrace {
+            let table = self.parse_table();
+            return Ok(AssignmentExpression {
+                identifier: cur_token,
+                value: AssignmentValue::Table(table.unwrap()),
+            });
+        } else {
+            let value_token = self.lexer.advance();
+            if value_token.token_type == TokenType::Identifier
+                || value_token.token_type == TokenType::Integer
+                || value_token.token_type == TokenType::Float
+                || value_token.token_type == TokenType::String
+            {
+                return Ok(AssignmentExpression {
+                    identifier: cur_token,
+                    value: AssignmentValue::Value(value_token),
+                });
+            } else {
+                return Err(format!(
+                    "ParserError: expecting an assignable token type, got {:?}",
+                    value_token.token_type
+                ));
+            }
+        }
+    }
+
+    pub fn parse_table(&mut self) -> Result<Vec<TableEntry>, String> {
+        self.consume(TokenType::LBrace)?;
+        let mut table_entries: Vec<TableEntry> = Vec::new();
+
+        loop {
+            let cur_token = self.lexer.peek();
+            if cur_token.token_type == TokenType::RBrace {
+                break;
+            } else if cur_token.token_type == TokenType::EOF {
+                return Err("ParserError: unexpected end of input".to_string());
+            } else if cur_token.token_type == TokenType::Undefined {
+                return Err(format!(
+                    "ParserError: undefined token '{}'",
+                    cur_token.value
+                ));
+            }
+
+            let checkpoint = self.lexer.pos;
+
+            let assignment_result = self.parse_assignment();
+            if let Ok(assignment) = assignment_result {
+                table_entries.push(TableEntry::KeyValue(assignment));
+            } else {
+                self.lexer.pos = checkpoint;
+                let array_token = self.lexer.advance();
+                table_entries.push(TableEntry::ArrayElement(array_token));
+            }
+        }
+
+        self.consume(TokenType::RBrace)?;
+        Ok(table_entries)
+    }
+}
