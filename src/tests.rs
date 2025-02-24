@@ -1,16 +1,19 @@
-fn test_lazy_lexer() {
+use std::{fs::File, time::Instant};
+
+use crate::{json, lazylexer, lazyparser, lexer, parser, token::TokenType, typedefs::Statement};
+
+pub fn test_lazy_lexer() {
     let file = File::open("input/state.txt").expect("Failed to open file");
     let mut lexer = lazylexer::Lexer::new(file);
     loop {
         let token = lexer.advance();
-        // println!("{:?}", token);
         if token.token_type == TokenType::EOF || token.token_type == TokenType::Undefined {
             break;
         }
     }
 }
 
-fn test_eager_lexer() {
+pub fn test_eager_lexer() {
     let source = match std::fs::read_to_string("input/state.txt") {
         Ok(file) => file,
         Err(error) => panic!("{}", error),
@@ -18,21 +21,20 @@ fn test_eager_lexer() {
     let mut lexer = lexer::Lexer::new(source);
     loop {
         let token = lexer.advance();
-        // println!("{:?}", token);
         if token.token_type == TokenType::EOF || token.token_type == TokenType::Undefined {
             break;
         }
     }
 }
 
-fn test_lazy_parser() {
+pub fn test_lazy_parser() {
     let file = File::open("input/state.txt").expect("Failed to open file");
     let mut lexer = lazylexer::Lexer::new(file);
     let mut parser = lazyparser::Parser::new(&mut lexer);
     parser.parse_program().unwrap();
 }
 
-fn test_eager_parser() {
+pub fn test_eager_parser() {
     let source = match std::fs::read_to_string("input/state.txt") {
         Ok(file) => file,
         Err(error) => panic!("{}", error),
@@ -51,11 +53,11 @@ fn compare_lexers() {
     test_lazy_lexer();
     let duration_lazy = start_lazy.elapsed();
 
-    println!("Eager Lexer Time: {:?}", duration_eager);
-    println!("Lazy Lexer Time: {:?}", duration_lazy);
+    println!("Eager lexer time: {:?}", duration_eager);
+    println!("Lazy lexer time: {:?}", duration_lazy);
 }
 
-fn compare_parsers() {
+pub fn compare_parsers() {
     let start_eager = Instant::now();
     test_eager_parser();
     let duration_eager = start_eager.elapsed();
@@ -64,8 +66,8 @@ fn compare_parsers() {
     test_lazy_parser();
     let duration_lazy = start_lazy.elapsed();
 
-    println!("Eager Lexer Time: {:?}", duration_eager);
-    println!("Lazy Lexer Time: {:?}", duration_lazy);
+    println!("Eager lexer time: {:?}", duration_eager);
+    println!("Lazy lexer time: {:?}", duration_lazy);
 
     println!(
         "Speedup (lazy/eager) = {:?}",
@@ -73,7 +75,7 @@ fn compare_parsers() {
     );
 }
 
-fn simple_parse() {
+pub fn simple_parse() {
     let source = match std::fs::read_to_string("input/state.txt") {
         Ok(file) => file,
         Err(error) => panic!("{}", error),
@@ -87,17 +89,9 @@ fn simple_parse() {
             println!("{}", json::parse_expr_to_json(&assignment.value, 0));
         }
     }
-
-    // loop {
-    //     let token = lexer.advance();
-    //     if token.token_type == TokenType::EOF || token.token_type == TokenType::Undefined {
-    //         break;
-    //     }
-    //     println!("{:?}", token);
-    // }
 }
 
-fn lazy_parse() {
+pub fn lazy_parse() {
     let file = File::open("input/state.txt").expect("Failed to open file");
     let mut lexer = lazylexer::Lexer::new(file);
     let mut parser = lazyparser::Parser::new(&mut lexer);
