@@ -60,6 +60,9 @@ impl<R: Read> Lexer<R> {
         } else if current.is_whitespace() {
             self.skip_spaces();
             return self.advance();
+        } else if current == '#' {
+            self.skip_comment();
+            return self.advance();
         }
 
         Token::undefined(current)
@@ -114,6 +117,15 @@ impl<R: Read> Lexer<R> {
             Token::new(TokenType::String, buffer)
         } else {
             panic!("LexerError: unexpected end of string at {}", self.pos);
+        }
+    }
+
+    fn skip_comment(&mut self) {
+        while let Some(current) = self.get_current_char() {
+            if current == '\n' {
+                break;
+            }
+            self.buffer.pop_front();
         }
     }
 
