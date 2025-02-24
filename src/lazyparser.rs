@@ -56,14 +56,23 @@ impl<'a, R: Read> Parser<'a, R> {
                         table_elements.push(TableElement::ArrayElement(cur_token));
                         break;
                     } else {
-                        return Err(format!("ParserError: unexpected token {:?}", next_token));
+                        return Err(format!(
+                            "ParserError: unexpected token '{}'",
+                            next_token.value
+                        ));
                     }
                 } else if cur_token.token_type == TokenType::EOF {
                     return Err("ParserError: unexpected end of file".to_string());
                 } else if cur_token.token_type == TokenType::Undefined {
-                    return Err("ParserError: undefined token".to_string());
+                    return Err(format!(
+                        "ParserError: undefined token '{}'",
+                        cur_token.value
+                    ));
                 } else {
-                    return Err(format!("ParserError: unexpected token {:?}", cur_token));
+                    return Err(format!(
+                        "ParserError: unexpected token '{}'",
+                        cur_token.value
+                    ));
                 }
             }
             return Ok(Expression::Table(Table {
