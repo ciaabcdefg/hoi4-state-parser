@@ -1,8 +1,9 @@
 use crate::{
-    typedefs::{AssignmentStatement, Expression, TableElement},
     token::TokenType,
+    typedefs::{AssignmentStatement, Expression, TableElement},
 };
 
+/// Parses an expression to JSON format
 pub fn parse_expr_to_json(expr: &Expression, indent: usize) -> String {
     let indent_str = "    ".repeat(indent);
     let next_indent_str = "    ".repeat(indent + 1);
