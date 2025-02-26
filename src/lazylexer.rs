@@ -1,4 +1,5 @@
 use crate::token::{Token, TokenType};
+use core::panic;
 use phf::phf_map;
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Read};
@@ -13,6 +14,10 @@ pub struct Lexer<R: Read> {
     reader: BufReader<R>,
     buffer: VecDeque<char>, // Stores buffered characters for lookahead
     pos: usize,
+}
+
+fn is_char_identifier(c: char) -> bool {
+    return c.is_alphabetic() || c == '_';
 }
 
 impl<R: Read> Lexer<R> {
@@ -51,9 +56,9 @@ impl<R: Read> Lexer<R> {
 
         if SINGLE_CHAR_TOKENS.contains_key(&current) {
             return Token::new(SINGLE_CHAR_TOKENS[&current].clone(), current.to_string());
-        } else if current.is_alphabetic() {
+        } else if is_char_identifier(current) {
             return self.consume_identifier(current);
-        } else if current.is_numeric() {
+        } else if current.is_numeric() || current == '-' {
             return self.consume_numeric(current);
         } else if current == '"' {
             return self.consume_string();
@@ -72,7 +77,7 @@ impl<R: Read> Lexer<R> {
         let mut buffer = String::from(first_char);
 
         while let Some(current) = self.get_current_char() {
-            if !current.is_alphanumeric() && current != '_' {
+            if !is_char_identifier(current) {
                 break;
             }
             buffer.push(self.buffer.pop_front().unwrap());
@@ -84,17 +89,37 @@ impl<R: Read> Lexer<R> {
     fn consume_numeric(&mut self, first_char: char) -> Token {
         let mut buffer = String::from(first_char);
         let mut is_float = false;
+        let mut is_identifier = false;
+        let mut is_negative = false;
 
         while let Some(current) = self.get_current_char() {
-            if current == '.' && !is_float {
-                is_float = true;
+            if current == '-' {
+                if !is_negative {
+                    is_negative = true;
+                } else {
+                    is_identifier = true;
+                }
+            } else if current == '.' {
+                if is_float {
+                    if !is_identifier {
+                        is_identifier = true;
+                    }
+                } else {
+                    is_float = true;
+                }
+            } else if is_char_identifier(current) {
+                if is_float {
+                    is_identifier = true;
+                }
             } else if !current.is_numeric() {
                 break;
             }
             buffer.push(self.buffer.pop_front().unwrap());
         }
 
-        if is_float {
+        if is_identifier {
+            Token::new(TokenType::Identifier, buffer)
+        } else if is_float {
             Token::new(TokenType::Float, buffer)
         } else {
             Token::new(TokenType::Integer, buffer)

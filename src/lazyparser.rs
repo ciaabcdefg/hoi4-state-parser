@@ -79,6 +79,9 @@ impl<'a, R: Read> Parser<'a, R> {
                 elements: table_elements,
             }));
         }
-        return Err(format!("ParserError: unexpected token '{:?}'", cur_token));
+        return Err(format!(
+            "ParserError: unexpected token '{}'",
+            cur_token.value
+        ));
     }
 }
