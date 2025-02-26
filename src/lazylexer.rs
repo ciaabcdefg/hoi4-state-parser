@@ -4,24 +4,27 @@ use phf::phf_map;
 use std::collections::VecDeque;
 use std::io::{BufRead, BufReader, Read};
 
+/// A mapping of one character to its corresponding token
 static SINGLE_CHAR_TOKENS: phf::Map<char, TokenType> = phf_map! {
     '{' => TokenType::LBrace,
     '}' => TokenType::RBrace,
     '=' => TokenType::Equal,
 };
 
+/// A lazy lexer (reads source code line by line)
 pub struct Lexer<R: Read> {
     reader: BufReader<R>,
     buffer: VecDeque<char>, // Stores buffered characters for lookahead
     pos: usize,
 }
 
+/// Check if given character is a typical identfiier (alphabetic or starts with an underscore '_')
 fn is_char_identifier(c: char) -> bool {
     return c.is_alphabetic() || c == '_';
 }
 
 impl<R: Read> Lexer<R> {
-    /// Initializes a new lexer with a reader
+    /// Initializes a new lazy lexer with a reader
     pub fn new(reader: R) -> Self {
         Self {
             reader: BufReader::new(reader),
@@ -93,13 +96,19 @@ impl<R: Read> Lexer<R> {
         let mut is_negative = false;
 
         while let Some(current) = self.get_current_char() {
+            // A negative number must start with a hyphen,
+            // and there mustn't be other instances of it
+            // otherwise, it's an identifier
             if current == '-' {
                 if !is_negative {
                     is_negative = true;
                 } else {
                     is_identifier = true;
                 }
-            } else if current == '.' {
+            }
+            // A float must contain only one instance of a dot '.'
+            // otherwise, it's an identifier (ex. 1999.31.11 is an identifier, not a float)
+            else if current == '.' {
                 if is_float {
                     if !is_identifier {
                         is_identifier = true;
@@ -107,11 +116,14 @@ impl<R: Read> Lexer<R> {
                 } else {
                     is_float = true;
                 }
-            } else if is_char_identifier(current) {
-                if is_float {
-                    is_identifier = true;
-                }
-            } else if !current.is_numeric() {
+            }
+            // If a sequence starting with a number contains an identifier character
+            // it immediately becomes an identifier
+            else if is_char_identifier(current) {
+                is_identifier = true;
+            }
+            // Finally, break if current character isn't a numeric character (if no cases above apply)
+            else if !current.is_numeric() {
                 break;
             }
             buffer.push(self.buffer.pop_front().unwrap());
@@ -131,6 +143,9 @@ impl<R: Read> Lexer<R> {
         let mut is_valid_string = false;
 
         while let Some(current) = self.buffer.pop_front() {
+            // Closes the string, which makes the string 'valid'
+            // ex. "Hello World" is a valid string,
+            // while "Hello World isn't because it isnt' properly terminated with a closing quote
             if current == '"' {
                 is_valid_string = true;
                 break;
@@ -145,6 +160,7 @@ impl<R: Read> Lexer<R> {
         }
     }
 
+    /// Ignores commented lines (starts with '#')
     fn skip_comment(&mut self) {
         while let Some(current) = self.get_current_char() {
             if current == '\n' {
@@ -154,6 +170,8 @@ impl<R: Read> Lexer<R> {
         }
     }
 
+    /// Skips through whitespaces until it hits a non-whitespace character
+    /// without consuming it
     fn skip_spaces(&mut self) {
         while let Some(current) = self.get_current_char() {
             if !current.is_whitespace() {
