@@ -1,17 +1,10 @@
-use std::{
-    env,
-    fs::{self, File},
-    io::Write,
-    path::Path,
-};
+use std::{env, fs::File, io::Write, path::Path};
 
 use typedefs::Statement;
 
 mod json;
 mod lazylexer;
 mod lazyparser;
-mod lexer;
-mod parser;
 mod token;
 mod typedefs;
 
